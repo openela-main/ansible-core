@@ -1,0 +1,157 @@
+From 4a3f5b71678c2f23f31c636472bbc0fd30c3e7e8 Mon Sep 17 00:00:00 2001
+From: Matt Clay <matt@mystile.com>
+Date: Thu, 23 Feb 2023 12:45:43 -0800
+Subject: [PATCH] [stable-2.14] ansible-test - Fix vendoring support (#80074)
+
+- Support loading of vendored Python packages.
+- Exclude vendored Python packages from payloads.
+(cherry picked from commit 6bfe6b899a4881ebc065834a43a26e123d7fdab3)
+
+Co-authored-by: Matt Clay <matt@mystile.com>
+---
+ .../ansible-test-vendoring-support.yml        |  3 ++
+ .../targets/ansible-test-vendoring/aliases    |  5 +++
+ .../ns/col/tests/config.yml                   |  4 +++
+ .../targets/ansible-test-vendoring/runme.sh   | 33 +++++++++++++++++++
+ test/lib/ansible_test/_internal/payload.py    |  8 +++++
+ test/lib/ansible_test/_internal/util.py       | 17 ++++++++++
+ 6 files changed, 70 insertions(+)
+ create mode 100644 changelogs/fragments/ansible-test-vendoring-support.yml
+ create mode 100644 test/integration/targets/ansible-test-vendoring/aliases
+ create mode 100644 test/integration/targets/ansible-test-vendoring/ansible_collections/ns/col/tests/config.yml
+ create mode 100755 test/integration/targets/ansible-test-vendoring/runme.sh
+
+diff --git a/changelogs/fragments/ansible-test-vendoring-support.yml b/changelogs/fragments/ansible-test-vendoring-support.yml
+new file mode 100644
+index 0000000000..234268a311
+--- /dev/null
++++ b/changelogs/fragments/ansible-test-vendoring-support.yml
+@@ -0,0 +1,3 @@
++bugfixes:
++  - ansible-test - Support loading of vendored Python packages from ansible-core.
++  - ansible-test - Exclude ansible-core vendored Python packages from ansible-test payloads.
+diff --git a/test/integration/targets/ansible-test-vendoring/aliases b/test/integration/targets/ansible-test-vendoring/aliases
+new file mode 100644
+index 0000000000..09cbf4b8f2
+--- /dev/null
++++ b/test/integration/targets/ansible-test-vendoring/aliases
+@@ -0,0 +1,5 @@
++shippable/posix/group3  # runs in the distro test containers
++shippable/generic/group1  # runs in the default test container
++context/controller
++needs/target/collection
++destructive  # adds and then removes packages into lib/ansible/_vendor/
+diff --git a/test/integration/targets/ansible-test-vendoring/ansible_collections/ns/col/tests/config.yml b/test/integration/targets/ansible-test-vendoring/ansible_collections/ns/col/tests/config.yml
+new file mode 100644
+index 0000000000..c73de69dfc
+--- /dev/null
++++ b/test/integration/targets/ansible-test-vendoring/ansible_collections/ns/col/tests/config.yml
+@@ -0,0 +1,4 @@
++# This config file is included to cause ansible-test to import the `packaging` module.
++
++modules:
++  python_requires: default
+diff --git a/test/integration/targets/ansible-test-vendoring/runme.sh b/test/integration/targets/ansible-test-vendoring/runme.sh
+new file mode 100755
+index 0000000000..fa6f652a21
+--- /dev/null
++++ b/test/integration/targets/ansible-test-vendoring/runme.sh
+@@ -0,0 +1,33 @@
++#!/usr/bin/env bash
++
++set -eux
++
++# Run import sanity tests which require modifications to the source directory.
++
++vendor_dir="$(python -c 'import pathlib, ansible._vendor; print(pathlib.Path(ansible._vendor.__file__).parent)')"
++
++mkdir "${vendor_dir}/packaging/"  # intended to fail if packaging is already present (to avoid deleting it later)
++
++cleanup() {
++    rm -rf "${vendor_dir}/packaging/"
++}
++
++trap cleanup EXIT
++
++# Verify that packages installed in the vendor directory are loaded by ansible-test.
++# This is done by injecting a broken `packaging` package, which should cause ansible-test to fail.
++
++echo 'raise Exception("intentional failure from ansible-test-vendoring integration test")' > "${vendor_dir}/packaging/__init__.py"
++
++if ansible-test sanity --test import --color --truncate 0 "${@}" > output.log 2>&1; then
++    echo "ansible-test did not exit with a non-zero status"
++    cat output.log
++    exit 1
++fi
++
++if ! grep '^Exception: intentional failure from ansible-test-vendoring integration test$' output.log; then
++    echo "ansible-test did not fail with the expected output"
++    cat output.log
++    exit 1
++fi
++
+diff --git a/test/lib/ansible_test/_internal/payload.py b/test/lib/ansible_test/_internal/payload.py
+index f62dc2baa8..10dde7b8b1 100644
+--- a/test/lib/ansible_test/_internal/payload.py
++++ b/test/lib/ansible_test/_internal/payload.py
+@@ -46,6 +46,14 @@ def create_payload(args: CommonConfig, dst_path: str) -> None:
+     files = list(data_context().ansible_source)
+     filters = {}
+
++    # Exclude vendored files from the payload.
++    # They may not be compatible with the delegated environment.
++    files = [
++        (abs_path, rel_path) for abs_path, rel_path in files
++        if not rel_path.startswith('lib/ansible/_vendor/')
++        or rel_path == 'lib/ansible/_vendor/__init__.py'
++    ]
++
+     def make_executable(tar_info: tarfile.TarInfo) -> t.Optional[tarfile.TarInfo]:
+         """Make the given file executable."""
+         tar_info.mode |= stat.S_IXUSR | stat.S_IXOTH | stat.S_IXGRP
+diff --git a/test/lib/ansible_test/_internal/util.py b/test/lib/ansible_test/_internal/util.py
+index 53959d41a2..029f73be22 100644
+--- a/test/lib/ansible_test/_internal/util.py
++++ b/test/lib/ansible_test/_internal/util.py
+@@ -24,10 +24,14 @@ import time
+ import functools
+ import shlex
+ import typing as t
++import warnings
+ 
+ from struct import unpack, pack
+ from termios import TIOCGWINSZ
+ 
++# CAUTION: Avoid third-party imports in this module whenever possible.
++#          Any third-party imports occurring here will result in an error if they are vendored by ansible-core.
++
+ try:
+     from typing_extensions import TypeGuard  # TypeGuard was added in Python 3.10
+ except ImportError:
+@@ -339,6 +343,17 @@ def get_ansible_version() -> str:
+     return ansible_version
+ 
+ 
++def _enable_vendoring() -> None:
++    """Enable support for loading Python packages vendored by ansible-core."""
++    # Load the vendoring code by file path, since ansible may not be in our sys.path.
++    # Convert warnings into errors, to avoid problems from surfacing later.
++
++    with warnings.catch_warnings():
++        warnings.filterwarnings('error')
++
++        load_module(os.path.join(ANSIBLE_LIB_ROOT, '_vendor', '__init__.py'), 'ansible_vendor')
++
++
+ @cache
+ def get_available_python_versions() -> dict[str, str]:
+     """Return a dictionary indicating which supported Python versions are available."""
+@@ -1148,3 +1148,5 @@ def type_guard(sequence: c.Sequence[t.Any], guard_type: t.Type[C]) -> TypeGuard[
+ 
+ 
+ display = Display()  # pylint: disable=locally-disabled, invalid-name
++
++_enable_vendoring()
+-- 
+2.39.2
+
