@@ -1,0 +1,12 @@
+diff --git a/requirements.txt b/requirements.txt
+index 20562c3e0f..b24f27b2ca 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -3,7 +3,6 @@
+ # packages.  Thus, this should be the loosest set possible (only required
+ # packages, not optional ones, and with the widest range of versions that could
+ # be suitable)
+-jinja2 >= 3.0.0
+ PyYAML >= 5.1  # PyYAML 5.1 is required for Python 3.8+ support
+ cryptography
+ packaging
