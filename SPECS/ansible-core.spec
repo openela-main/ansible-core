@@ -8,7 +8,7 @@
 
 # Disable shebang munging for specific paths.  These files are data files.
 # ansible-test munges the shebangs itself.
-%global __brp_mangle_shebangs_exclude_from_file %{SOURCE1}
+%global __brp_mangle_shebangs_exclude_from_file %{SOURCE2}
 
 # NOTE(pabelanger): Don't auto add pwsh as Requires for ansible-test. We do
 # not wish to package it.
@@ -27,33 +27,37 @@
 %define vendor_pip %{__python3} -m pip install --no-deps -v --no-build-isolation --no-binary :all: -t %{vendor_path}
 
 # These control which bundled dep versions we pin against
+%global docutils_version 0.20.1
 %global jinja2_version 3.1.2
-%global markupsafe_version 2.1.0
-%global packaging_version 20.4
-%global pyparsing_version 2.4.7
-%global resolvelib_version 0.5.4
+%global markupsafe_version 2.1.2
+%global packaging_version 21.3
+%global pyparsing_version 3.0.7
+%global resolvelib_version 1.0.1
 
 
 Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
-Version: 2.14.2
-Release: 4%{?dist}
+Version: 2.15.3
+Release: 1%{?dist}
 ExcludeArch: i686
 
 Group: Development/Libraries
 License: GPLv3+
 Source0: https://files.pythonhosted.org/packages/source/a/ansible-core/ansible-core-%{version}.tar.gz
-Source1: ansible-test-data-files.txt
+Source1: https://github.com/ansible/ansible-documentation/archive/v%{version}/ansible-documentation-%{version}.tar.gz
+Source2: ansible-test-data-files.txt
 
 # And bundled deps
-Source2: https://files.pythonhosted.org/packages/source/J/Jinja2/Jinja2-%{jinja2_version}.tar.gz
-Source3: https://files.pythonhosted.org/packages/source/M/MarkupSafe/MarkupSafe-%{markupsafe_version}.tar.gz
-Source4: https://files.pythonhosted.org/packages/source/p/packaging/packaging-%{packaging_version}.tar.gz
-Source5: https://files.pythonhosted.org/packages/source/p/pyparsing/pyparsing-%{pyparsing_version}.tar.gz
-Source6: https://files.pythonhosted.org/packages/source/r/resolvelib/resolvelib-%{resolvelib_version}.tar.gz
+Source3: https://files.pythonhosted.org/packages/source/J/Jinja2/Jinja2-%{jinja2_version}.tar.gz
+Source4: https://files.pythonhosted.org/packages/source/M/MarkupSafe/MarkupSafe-%{markupsafe_version}.tar.gz
+Source5: https://files.pythonhosted.org/packages/source/p/packaging/packaging-%{packaging_version}.tar.gz
+Source6: https://files.pythonhosted.org/packages/source/p/pyparsing/pyparsing-%{pyparsing_version}.tar.gz
+Source7: https://files.pythonhosted.org/packages/source/r/resolvelib/resolvelib-%{resolvelib_version}.tar.gz
+
+# Deps to build manpages
+Source8: https://sourceforge.net/projects/docutils/files/docutils/%{docutils_version}/docutils-%{docutils_version}.tar.gz
 
 Patch0: remove-bundled-deps-from-requirements.patch
-Patch1: ansible-test-Fix-vendoring-support-80074.patch
 
 URL: http://ansible.com
 
@@ -89,7 +93,6 @@ BuildRequires: make git-core gcc
 Requires: git-core
 Requires: python%{python3_pkgversion}-PyYAML >= 5.1
 Requires: python%{python3_pkgversion}-cryptography
-Requires: python%{python3_pkgversion}-six
 Requires: sshpass
 
 %description
@@ -114,9 +117,8 @@ This package installs the ansible-test command for testing modules and plugins
 developed for ansible.
 
 %prep
-%setup -q -b2 -b3 -b4 -b5 -b6 -n ansible-core-%{version}
+%setup -q -b1 -b3 -b4 -b5 -b6 -b7 -b8 -n ansible-core-%{version}
 %patch0 -p1
-%patch1 -p1
 
 # Fix all Python shebangs recursively in ansible-test
 %{py3_shebang_fix} test/lib/ansible_test
@@ -172,13 +174,20 @@ done
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/roles/
 
-cp examples/hosts %{buildroot}%{_sysconfdir}/ansible/
-cp examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
+cp ../ansible-documentation-%{version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
+cp ../ansible-documentation-%{version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
+
 mkdir -p %{buildroot}/%{_mandir}/man1/
+
+mkdir -p docs/man/man1
+mkdir -p /tmp/_docutils
+%{__python3} -m pip install ../docutils-%{docutils_version} -t /tmp/_docutils --no-build-isolation
+PYTHONPATH=%{vendor_path}:/tmp/_docutils %{__python3} packaging/cli-doc/build.py man --output-dir docs/man/man1
+rm -rf /tmp/_docutils
 
 cp -v docs/man/man1/*.1 %{buildroot}/%{_mandir}/man1/
 
-cp -pr docs/docsite/rst .
+cp -pr ../ansible-documentation-%{version}/docs/docsite/rst .
 cp -p lib/ansible_core.egg-info/PKG-INFO .
 
 strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
@@ -188,7 +197,7 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 %{_bindir}/ansible*
 %exclude %{_bindir}/ansible-test
 %config(noreplace) %{_sysconfdir}/ansible/
-%doc README.rst PKG-INFO COPYING
+%doc README.md PKG-INFO COPYING
 %doc changelogs/CHANGELOG-v2.*.rst
 %doc %{_mandir}/man1/ansible*
 %{_datadir}/ansible/
@@ -201,9 +210,24 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 %{python3_sitelib}/ansible_test
 
 %changelog
-* Tue May 23 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.14.2-4
-- ansible-test: Fix vendoring support (rhbz#2212445)
-- remove unused sources.
+* Wed Aug 16 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.15.3-1
+- ansible-core 2.15.3 release (rhbz#2232431)
+- Use docs and examples from ansible-documentation project.
+- Build the manpages.
+
+* Mon Aug 14 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.15.2-1
+- ansible-core 2.15.2 release (rhbz#2231891)
+
+* Tue Jul 04 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.15.1-1
+- ansible-core 2.15.1 release (rhbz#2219620)
+
+* Mon May 15 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.15.0-1
+- ansible-core 2.15.0 release (rhbz#2204511)
+- update bundled markupsafe to 2.1.2.
+- update bundled packaging to 21.3.
+- update bundled pyparsing to 3.0.7.
+- update bundled resolvelib to 1.0.1.
+- remove six runtime dependency.
 
 * Tue Feb 14 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.14.2-3
 - rebuild with python 3.11 (rhbz#2169524)
