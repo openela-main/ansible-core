@@ -1,18 +1,12 @@
 diff --git a/requirements.txt b/requirements.txt
-index 20562c3e0f..792daa209a 100644
+index 20562c3e0f..b24f27b2ca 100644
 --- a/requirements.txt
 +++ b/requirements.txt
-@@ -3,13 +3,5 @@
+@@ -3,7 +3,6 @@
  # packages.  Thus, this should be the loosest set possible (only required
  # packages, not optional ones, and with the widest range of versions that could
  # be suitable)
 -jinja2 >= 3.0.0
  PyYAML >= 5.1  # PyYAML 5.1 is required for Python 3.8+ support
  cryptography
--packaging
--# NOTE: resolvelib 0.x version bumps should be considered major/breaking
--# NOTE: and we should update the upper cap with care, at least until 1.0
--# NOTE: Ref: https://github.com/sarugaku/resolvelib/issues/69
--# NOTE: When updating the upper bound, also update the latest version used
--# NOTE: in the ansible-galaxy-collection test suite.
--resolvelib >= 0.5.3, < 0.9.0  # dependency resolver used by ansible-galaxy
+ packaging

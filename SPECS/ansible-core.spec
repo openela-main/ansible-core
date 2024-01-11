@@ -1,6 +1,3 @@
-%global __python3 /usr/bin/python3.11
-%global python3_pkgversion 3.11
-
 # We need this because we are no longer noarch, since our bundled deps might
 # conceivably need to compile arch-specific things. But we currently have no
 # useful debuginfo stuff.
@@ -8,7 +5,7 @@
 
 # Disable shebang munging for specific paths.  These files are data files.
 # ansible-test munges the shebangs itself.
-%global __brp_mangle_shebangs_exclude_from_file %{SOURCE1}
+%global __brp_mangle_shebangs_exclude_from_file %{SOURCE2}
 
 # RHEL and Fedora add -s to the shebang line.  We do *not* use -s -E -S or -I
 # with ansible because it has many optional features which users need to
@@ -24,31 +21,26 @@
 
 # These control which bundled dep versions we pin against
 %global jinja2_version 3.1.2
-%global markupsafe_version 2.1.0
-%global packaging_version 20.4
-%global pyparsing_version 2.4.7
-%global resolvelib_version 0.5.4
+%global markupsafe_version 2.1.2
 
 
 Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
-Version: 2.14.2
-Release: 5%{?dist}
+Epoch: 1
+Version: 2.14.9
+Release: 1%{?dist}
 
 Group: Development/Libraries
 License: GPLv3+
 Source0: https://files.pythonhosted.org/packages/source/a/ansible-core/ansible-core-%{version}.tar.gz
-Source1: ansible-test-data-files.txt
+Source1: https://github.com/ansible/ansible-documentation/archive/v%{version}/ansible-documentation-%{version}.tar.gz
+Source2: ansible-test-data-files.txt
 
 # And bundled deps
-Source2: https://files.pythonhosted.org/packages/source/J/Jinja2/Jinja2-%{jinja2_version}.tar.gz
-Source3: https://files.pythonhosted.org/packages/source/M/MarkupSafe/MarkupSafe-%{markupsafe_version}.tar.gz
-Source4: https://files.pythonhosted.org/packages/source/p/packaging/packaging-%{packaging_version}.tar.gz
-Source5: https://files.pythonhosted.org/packages/source/p/pyparsing/pyparsing-%{pyparsing_version}.tar.gz
-Source6: https://files.pythonhosted.org/packages/source/r/resolvelib/resolvelib-%{resolvelib_version}.tar.gz
+Source3: https://files.pythonhosted.org/packages/source/J/Jinja2/Jinja2-%{jinja2_version}.tar.gz
+Source4: https://files.pythonhosted.org/packages/source/M/MarkupSafe/MarkupSafe-%{markupsafe_version}.tar.gz
 
 Patch0: remove-bundled-deps-from-requirements.patch
-Patch1: ansible-test-Fix-vendoring-support-80074.patch
 
 URL: http://ansible.com
 
@@ -69,11 +61,9 @@ Provides: bundled(python-six) = 1.16.0
 # Things we explicitly bundle via src rpm, and put in ansible._vendor
 Provides: bundled(python-jinja2) = %{jinja2_version}
 Provides: bundled(python-markupsafe) = %{markupsafe_version}
-Provides: bundled(python-packaging) = %{packaging_version}
-Provides: bundled(python-pyparsing) = %{pyparsing_version}
-Provides: bundled(python-resolvelib) = %{resolvelib_version}
 
 BuildRequires: python%{python3_pkgversion}-devel
+BuildRequires: python%{python3_pkgversion}-docutils
 BuildRequires: python%{python3_pkgversion}-pip
 BuildRequires: python%{python3_pkgversion}-pyyaml
 BuildRequires: python%{python3_pkgversion}-rpm-macros
@@ -84,7 +74,9 @@ BuildRequires: make git-core gcc
 Requires: git-core
 Requires: python%{python3_pkgversion}-PyYAML >= 5.1
 Requires: python%{python3_pkgversion}-cryptography
-Requires: python%{python3_pkgversion}-six
+Requires: python%{python3_pkgversion}-packaging
+Requires: python%{python3_pkgversion}-resolvelib >= 0.5.3
+Requires: python%{python3_pkgversion}-resolvelib < 0.9.0
 Requires: sshpass
 
 %description
@@ -96,7 +88,7 @@ are transferred to managed machines automatically.
 
 %package -n ansible-test
 Summary: Tool for testing ansible plugin and module code
-Requires: %{name} = %{version}-%{release}
+Requires: %{name} = %{epoch}:%{version}-%{release}
 
 %description -n ansible-test
 Ansible is a radically simple model-driven configuration management,
@@ -109,9 +101,8 @@ This package installs the ansible-test command for testing modules and plugins
 developed for ansible.
 
 %prep
-%setup -q -b2 -b3 -b4 -b5 -b6 -n ansible-core-%{version}
+%setup -q -b1 -b3 -b4 -n ansible-core-%{version}
 %patch0 -p1
-%patch1 -p1
 
 # Fix all Python shebangs recursively in ansible-test
 %{py3_shebang_fix} test/lib/ansible_test
@@ -125,10 +116,7 @@ developed for ansible.
 # Handle bundled deps:
 %{vendor_pip} \
   ../Jinja2-%{jinja2_version}/ \
-  ../MarkupSafe-%{markupsafe_version}/ \
-  ../packaging-%{packaging_version}/ \
-  ../pyparsing-%{pyparsing_version}/ \
-  ../resolvelib-%{resolvelib_version}
+  ../MarkupSafe-%{markupsafe_version}/
 
 # Create system directories that Ansible defines as default locations in
 # ansible/config/base.yml
@@ -167,13 +155,17 @@ done
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/roles/
 
-cp examples/hosts %{buildroot}%{_sysconfdir}/ansible/
-cp examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
+cp ../ansible-documentation-%{version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
+cp ../ansible-documentation-%{version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
+
 mkdir -p %{buildroot}/%{_mandir}/man1/
+
+mkdir -p docs/man/man1
+PYTHONPATH=%{vendor_path} %{__python3} packaging/cli-doc/build.py man --output-dir docs/man/man1
 
 cp -v docs/man/man1/*.1 %{buildroot}/%{_mandir}/man1/
 
-cp -pr docs/docsite/rst .
+cp -pr ../ansible-documentation-%{version}/docs/docsite/rst .
 cp -p lib/ansible_core.egg-info/PKG-INFO .
 
 strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
@@ -183,7 +175,7 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 %{_bindir}/ansible*
 %exclude %{_bindir}/ansible-test
 %config(noreplace) %{_sysconfdir}/ansible/
-%doc README.rst PKG-INFO COPYING
+%doc README.md PKG-INFO COPYING
 %doc changelogs/CHANGELOG-v2.*.rst
 %doc %{_mandir}/man1/ansible*
 %{_datadir}/ansible/
@@ -197,8 +189,29 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 
 
 %changelog
-* Tue May 23 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.14.2-5
-- ansible-test: Fix vendoring support (rhbz#2212444)
+* Wed Aug 16 2023 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.9-1
+- ansible-core 2.14.9 release (rhbz#2232432)
+- Use docs and examples from ansible-documentation project.
+- Build the manpages.
+
+* Mon Aug 14 2023 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.8-1
+- ansible-core 2.14.8 release (rhbz#2231892)
+
+* Mon Jul 17 2023 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.7-1
+- ansible-core 2.14.7 release (rhbz#2221820)
+- rebuild with python 3.9 (rhbz#2221820)
+- remove bundled packaging, pyparsing and resolvelib.
+
+* Tue Jul 04 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.15.1-1
+- ansible-core 2.15.1 release (rhbz#2219619)
+
+* Mon May 15 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.15.0-1
+- ansible-core 2.15.0 release (rhbz#2204510)
+- update bundled markupsafe to 2.1.2.
+- update bundled packaging to 21.3.
+- update bundled pyparsing to 3.0.7.
+- update bundled resolvelib to 1.0.1.
+- remove six runtime dependency.
 
 * Mon Feb 13 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.14.2-4
 - rebuild with python 3.11 (rhbz#2169466)
