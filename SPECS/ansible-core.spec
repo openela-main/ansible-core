@@ -27,7 +27,7 @@
 Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
 Epoch: 1
-Version: 2.14.9
+Version: 2.14.14
 Release: 1%{?dist}
 
 Group: Development/Libraries
@@ -189,6 +189,17 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 
 
 %changelog
+* Fri Feb 02 2024 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.14-1
+- ansible-core 2.14.14 release (RHEL-23783)
+- Fix CVE-2024-0690 (possible information leak in tasks that ignore
+  ANSIBLE_NO_LOG configuration) (RHEL-22124)
+
+* Tue Dec 12 2023 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.13-1
+- ansible-core 2.14.13 release (RHEL-19298)
+
+* Thu Dec 07 2023 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.12-1
+- ansible-core 2.14.12 release (RHEL-18950)
+
 * Wed Aug 16 2023 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.9-1
 - ansible-core 2.14.9 release (rhbz#2232432)
 - Use docs and examples from ansible-documentation project.
