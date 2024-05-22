@@ -1,5 +1,5 @@
-%global __python3 /usr/bin/python3.11
-%global python3_pkgversion 3.11
+%global __python3 /usr/bin/python3.12
+%global python3_pkgversion 3.12
 
 # We need this because we are no longer noarch, since our bundled deps might
 # conceivably need to compile arch-specific things. But we currently have no
@@ -37,8 +37,8 @@
 
 Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
-Version: 2.15.3
-Release: 1%{?dist}
+Version: 2.16.3
+Release: 2%{?dist}
 ExcludeArch: i686
 
 Group: Development/Libraries
@@ -210,6 +210,20 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 %{python3_sitelib}/ansible_test
 
 %changelog
+* Mon Feb 05 2024 Dimitri Savineau <dsavinea@redhat.com> - 2.16.3-2
+- rebuild with python 3.12 (RHEL-24141)
+
+* Fri Feb 02 2024 Dimitri Savineau <dsavinea@redhat.com> - 2.16.3-1
+- ansible-core 2.16.3 release (RHEL-23782)
+- Fix CVE-2024-0690 (possible information leak in tasks that ignore
+  ANSIBLE_NO_LOG configuration) (RHEL-22123)
+
+* Tue Dec 12 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.16.2-1
+- ansible-core 2.16.2 release (RHEL-19297)
+
+* Thu Dec 07 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.16.1-1
+- ansible-core 2.16.1 release (RHEL-18965)
+
 * Wed Aug 16 2023 Dimitri Savineau <dsavinea@redhat.com> - 2.15.3-1
 - ansible-core 2.15.3 release (rhbz#2232431)
 - Use docs and examples from ansible-documentation project.
