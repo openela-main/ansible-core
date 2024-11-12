@@ -27,12 +27,12 @@
 Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
 Epoch: 1
-Version: 2.14.14
+Version: 2.14.17
 Release: 1%{?dist}
 
 Group: Development/Libraries
 License: GPLv3+
-Source0: https://files.pythonhosted.org/packages/source/a/ansible-core/ansible-core-%{version}.tar.gz
+Source0: https://files.pythonhosted.org/packages/source/a/ansible-core/ansible_core-%{version}.tar.gz
 Source1: https://github.com/ansible/ansible-documentation/archive/v%{version}/ansible-documentation-%{version}.tar.gz
 Source2: ansible-test-data-files.txt
 
@@ -101,7 +101,7 @@ This package installs the ansible-test command for testing modules and plugins
 developed for ansible.
 
 %prep
-%setup -q -b1 -b3 -b4 -n ansible-core-%{version}
+%setup -q -b1 -b3 -b4 -n ansible_core-%{version}
 %patch0 -p1
 
 # Fix all Python shebangs recursively in ansible-test
@@ -189,6 +189,9 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 
 
 %changelog
+* Thu May 23 2024 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.17-1
+- ansible-core 2.14.17 release (RHEL-38539)
+
 * Fri Feb 02 2024 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.14-1
 - ansible-core 2.14.14 release (RHEL-23783)
 - Fix CVE-2024-0690 (possible information leak in tasks that ignore
