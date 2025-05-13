@@ -20,6 +20,7 @@
 %define vendor_pip %{__python3} -m pip install --no-deps -v --no-build-isolation --no-binary :all: -t %{vendor_path}
 
 # These control which bundled dep versions we pin against
+%global doc_version 2.14.17
 %global jinja2_version 3.1.2
 %global markupsafe_version 2.1.2
 
@@ -27,13 +28,13 @@
 Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
 Epoch: 1
-Version: 2.14.17
+Version: 2.14.18
 Release: 1%{?dist}
 
 Group: Development/Libraries
 License: GPLv3+
 Source0: https://files.pythonhosted.org/packages/source/a/ansible-core/ansible_core-%{version}.tar.gz
-Source1: https://github.com/ansible/ansible-documentation/archive/v%{version}/ansible-documentation-%{version}.tar.gz
+Source1: https://github.com/ansible/ansible-documentation/archive/v%{doc_version}/ansible-documentation-%{doc_version}.tar.gz
 Source2: ansible-test-data-files.txt
 
 # And bundled deps
@@ -155,8 +156,8 @@ done
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/roles/
 
-cp ../ansible-documentation-%{version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
-cp ../ansible-documentation-%{version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
+cp ../ansible-documentation-%{doc_version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
+cp ../ansible-documentation-%{doc_version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
 
 mkdir -p %{buildroot}/%{_mandir}/man1/
 
@@ -165,7 +166,7 @@ PYTHONPATH=%{vendor_path} %{__python3} packaging/cli-doc/build.py man --output-d
 
 cp -v docs/man/man1/*.1 %{buildroot}/%{_mandir}/man1/
 
-cp -pr ../ansible-documentation-%{version}/docs/docsite/rst .
+cp -pr ../ansible-documentation-%{doc_version}/docs/docsite/rst .
 cp -p lib/ansible_core.egg-info/PKG-INFO .
 
 strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
@@ -175,7 +176,8 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 %{_bindir}/ansible*
 %exclude %{_bindir}/ansible-test
 %config(noreplace) %{_sysconfdir}/ansible/
-%doc README.md PKG-INFO COPYING
+%license COPYING
+%doc README.md PKG-INFO
 %doc changelogs/CHANGELOG-v2.*.rst
 %doc %{_mandir}/man1/ansible*
 %{_datadir}/ansible/
@@ -189,6 +191,10 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 
 
 %changelog
+* Fri Jan 03 2025 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.18-1
+- ansible-core 2.14.18 release (RHEL-69086)
+- Fix license file path
+
 * Thu May 23 2024 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.17-1
 - ansible-core 2.14.17 release (RHEL-38539)
 
