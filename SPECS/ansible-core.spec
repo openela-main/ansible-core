@@ -29,7 +29,7 @@ Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
 Epoch: 1
 Version: 2.14.18
-Release: 1%{?dist}
+Release: 3%{?dist}
 
 Group: Development/Libraries
 License: GPLv3+
@@ -42,6 +42,11 @@ Source3: https://files.pythonhosted.org/packages/source/J/Jinja2/Jinja2-%{jinja2
 Source4: https://files.pythonhosted.org/packages/source/M/MarkupSafe/MarkupSafe-%{markupsafe_version}.tar.gz
 
 Patch0: remove-bundled-deps-from-requirements.patch
+
+%if 0%{!?centos:1} && 0%{?rhel}
+Source99: telemetry.py
+Patch99: telemetry.patch
+%endif
 
 URL: http://ansible.com
 
@@ -108,6 +113,11 @@ developed for ansible.
 # Fix all Python shebangs recursively in ansible-test
 %{py3_shebang_fix} test/lib/ansible_test
 
+%if 0%{!?centos:1} && 0%{?rhel}
+%patch99 -p1
+%{py3_shebang_fix} %{SOURCE99}
+%endif
+
 %build
 %{py3_build}
 
@@ -159,6 +169,12 @@ mkdir -p %{buildroot}%{_sysconfdir}/ansible/roles/
 cp ../ansible-documentation-%{doc_version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
 cp ../ansible-documentation-%{doc_version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
 
+%if 0%{!?centos:1} && 0%{?rhel}
+mkdir -p %{buildroot}%{_datadir}/ansible/telemetry
+cp %{SOURCE99} %{buildroot}%{_datadir}/ansible/telemetry/
+%py_byte_compile %{__python3} %{buildroot}%{_datadir}/ansible/telemetry/telemetry.py
+%endif
+
 mkdir -p %{buildroot}/%{_mandir}/man1/
 
 mkdir -p docs/man/man1
@@ -191,6 +207,12 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 
 
 %changelog
+* Tue Feb 10 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.18-3
+- Fix selinux AVC denial when telemetry is enabled (RHEL-148293)
+
+* Thu Oct 30 2025 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.18-2
+- Add telemetry for RHEL (RHEL-123003)
+
 * Fri Jan 03 2025 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.18-1
 - ansible-core 2.14.18 release (RHEL-69086)
 - Fix license file path

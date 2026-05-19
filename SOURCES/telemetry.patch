@@ -1,0 +1,13 @@
+diff --git a/lib/ansible/plugins/loader.py b/lib/ansible/plugins/loader.py
+index 2e8a77e398..fcd941e14e 100644
+--- a/lib/ansible/plugins/loader.py
++++ b/lib/ansible/plugins/loader.py
+@@ -1483,7 +1483,7 @@ cache_loader = PluginLoader(
+ callback_loader = PluginLoader(
+     'CallbackModule',
+     'ansible.plugins.callback',
+-    C.DEFAULT_CALLBACK_PLUGIN_PATH,
++    C.DEFAULT_CALLBACK_PLUGIN_PATH + ['/usr/share/ansible/telemetry'],
+     'callback_plugins',
+ )
+ 
