@@ -13,11 +13,13 @@
 # Set this to nil to remove -s
 %define py3_shbang_opts %{nil}
 
+%global doc_version 2.16.15
+
 Name: ansible-core
 Summary: A radically simple IT automation system
 Epoch:   1
-Version: 2.16.14
-Release: 1%{?dist}
+Version: 2.16.16
+Release: 2%{?dist}
 Group: Development/Libraries
 # The main license is GPLv3+. Many of the files in lib/ansible/module_utils
 # are BSD licensed. There are various files scattered throughout the codebase
@@ -25,8 +27,13 @@ Group: Development/Libraries
 License: GPL-3.0-or-later AND BSD-2-Clause AND PSF-2.0 AND MIT AND Apache-2.0
 
 Source0: https://files.pythonhosted.org/packages/source/a/ansible-core/ansible_core-%{version}.tar.gz
-Source1: https://github.com/ansible/ansible-documentation/archive/v%{version}/ansible-documentation-%{version}.tar.gz
+Source1: https://github.com/ansible/ansible-documentation/archive/v%{doc_version}/ansible-documentation-%{doc_version}.tar.gz
 Source2: ansible-test-data-files.txt
+
+%if 0%{!?centos:1} && 0%{?rhel}
+Source99: telemetry.py
+Patch99: telemetry.patch
+%endif
 
 Url: https://ansible.com
 BuildArch: noarch
@@ -93,10 +100,15 @@ This package installs the ansible-test command for testing modules and plugins
 developed for ansible.
 
 %prep
-%autosetup -n ansible_core-%{version} -a1
+%autosetup -N -n ansible_core-%{version} -a1
 
 # Fix all Python shebangs recursively in ansible-test
 %{py3_shebang_fix} test/lib/ansible_test
+
+%if 0%{!?centos:1} && 0%{?rhel}
+%patch -P99 -p1
+%{py3_shebang_fix} %{SOURCE99}
+%endif
 
 %build
 %{pyproject_wheel}
@@ -146,8 +158,15 @@ done
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/roles/
 
-cp ansible-documentation-%{version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
-cp ansible-documentation-%{version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
+cp ansible-documentation-%{doc_version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
+cp ansible-documentation-%{doc_version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
+
+%if 0%{!?centos:1} && 0%{?rhel}
+mkdir -p %{buildroot}%{_datadir}/ansible/telemetry
+cp %{SOURCE99} %{buildroot}%{_datadir}/ansible/telemetry/
+%py_byte_compile %{__python3} %{buildroot}%{_datadir}/ansible/telemetry/telemetry.py
+%endif
+
 mkdir -p %{buildroot}/%{_mandir}/man1
 cp -v docs/man/man1/*.1 %{buildroot}/%{_mandir}/man1/
 
@@ -178,6 +197,18 @@ install -Dpm 0644 licenses/* -t %{buildroot}%{_pkglicensedir}
 %{python3_sitelib}/ansible_test
 
 %changelog
+* Tue Feb 10 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.16-2
+- Fix selinux AVC denial when telemetry is enabled (RHEL-148292)
+
+* Tue Feb 03 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.16-1
+- ansible-core 2.16.16 release (RHEL-145990)
+
+* Tue Dec 16 2025 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.15-1
+- ansible-core 2.16.15 release (RHEL-136245)
+
+* Mon Oct 27 2025 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.14-2
+- Add telemetry for RHEL (RHEL-123004)
+
 * Mon Dec 02 2024 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.14-1
 - ansible-core 2.16.14 release (RHEL-69763)
 - Fix CVE-2024-11079 (Unsafe Tagging Bypass via hostvars Object in
