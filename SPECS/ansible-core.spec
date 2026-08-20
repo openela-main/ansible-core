@@ -19,7 +19,7 @@ Name: ansible-core
 Summary: A radically simple IT automation system
 Epoch:   1
 Version: 2.16.16
-Release: 2%{?dist}
+Release: 2%{?dist}.1
 Group: Development/Libraries
 # The main license is GPLv3+. Many of the files in lib/ansible/module_utils
 # are BSD licensed. There are various files scattered throughout the codebase
@@ -34,6 +34,9 @@ Source2: ansible-test-data-files.txt
 Source99: telemetry.py
 Patch99: telemetry.patch
 %endif
+
+# https://github.com/ansible/ansible/commit/8ffdf8a635386ceb83900d16ee1b2b0d50170f01
+Patch100: ansible-core-2.16.16-CVE-2026-11332.patch
 
 Url: https://ansible.com
 BuildArch: noarch
@@ -109,6 +112,8 @@ developed for ansible.
 %patch -P99 -p1
 %{py3_shebang_fix} %{SOURCE99}
 %endif
+
+%patch -P100 -p1
 
 %build
 %{pyproject_wheel}
@@ -197,6 +202,11 @@ install -Dpm 0644 licenses/* -t %{buildroot}%{_pkglicensedir}
 %{python3_sitelib}/ansible_test
 
 %changelog
+* Sat Jul 11 2026 RHEL Packaging Agent <redhat-ymir-agent@redhat.com> - 1:2.16.16-2.1
+- Fix CVE-2026-11332 (ansible-galaxy role installs could allow
+  arbitrary git configuration injection via malformed role
+  requirements) (RHEL-194128)
+
 * Tue Feb 10 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.16-2
 - Fix selinux AVC denial when telemetry is enabled (RHEL-148292)
 
