@@ -38,7 +38,7 @@
 Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
 Version: 2.16.3
-Release: 2%{?dist}
+Release: 3%{?dist}
 ExcludeArch: i686
 
 Group: Development/Libraries
@@ -58,6 +58,11 @@ Source7: https://files.pythonhosted.org/packages/source/r/resolvelib/resolvelib-
 Source8: https://sourceforge.net/projects/docutils/files/docutils/%{docutils_version}/docutils-%{docutils_version}.tar.gz
 
 Patch0: remove-bundled-deps-from-requirements.patch
+
+%if 0%{!?centos:1} && 0%{?rhel}
+Source99: telemetry.py
+Patch99: telemetry.patch
+%endif
 
 URL: http://ansible.com
 
@@ -123,6 +128,10 @@ developed for ansible.
 # Fix all Python shebangs recursively in ansible-test
 %{py3_shebang_fix} test/lib/ansible_test
 
+%if 0%{!?centos:1} && 0%{?rhel}
+%patch -P99 -p1
+%endif
+
 %build
 %{py3_build}
 
@@ -177,6 +186,12 @@ mkdir -p %{buildroot}%{_sysconfdir}/ansible/roles/
 cp ../ansible-documentation-%{version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
 cp ../ansible-documentation-%{version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
 
+%if 0%{!?centos:1} && 0%{?rhel}
+mkdir -p %{buildroot}%{_datadir}/ansible/telemetry
+cp %{SOURCE99} %{buildroot}%{_datadir}/ansible/telemetry/
+%py_byte_compile %{__python3} %{buildroot}%{_datadir}/ansible/telemetry/telemetry.py
+%endif
+
 mkdir -p %{buildroot}/%{_mandir}/man1/
 
 mkdir -p docs/man/man1
@@ -210,6 +225,9 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 %{python3_sitelib}/ansible_test
 
 %changelog
+* Wed Jul 29 2026 Dimitri Savineau <dsavinea@redhat.com> - 2.16.3-3
+- Add telemetry for RHEL (RHEL-219532)
+
 * Mon Feb 05 2024 Dimitri Savineau <dsavinea@redhat.com> - 2.16.3-2
 - rebuild with python 3.12 (RHEL-24141)
 
