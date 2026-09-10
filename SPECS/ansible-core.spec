@@ -38,7 +38,7 @@
 Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
 Version: 2.16.3
-Release: 3%{?dist}
+Release: 4%{?dist}
 ExcludeArch: i686
 
 Group: Development/Libraries
@@ -63,6 +63,9 @@ Patch0: remove-bundled-deps-from-requirements.patch
 Source99: telemetry.py
 Patch99: telemetry.patch
 %endif
+
+# https://github.com/ansible/ansible/commit/8ffdf8a635386ceb83900d16ee1b2b0d50170f01
+Patch100: ansible-core-2.16.3-CVE-2026-11332.patch
 
 URL: http://ansible.com
 
@@ -131,6 +134,8 @@ developed for ansible.
 %if 0%{!?centos:1} && 0%{?rhel}
 %patch -P99 -p1
 %endif
+
+%patch -P100 -p1
 
 %build
 %{py3_build}
@@ -225,6 +230,11 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 %{python3_sitelib}/ansible_test
 
 %changelog
+* Wed Sep 09 2026 Dimitri Savineau <dsavinea@redhat.com> - 2.16.3-4
+- Fix CVE-2026-11332 (ansible-galaxy role installs could allow
+  arbitrary git configuration injection via malformed role
+  requirements) (RHEL-194126)
+
 * Wed Jul 29 2026 Dimitri Savineau <dsavinea@redhat.com> - 2.16.3-3
 - Add telemetry for RHEL (RHEL-219532)
 
