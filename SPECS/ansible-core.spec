@@ -13,13 +13,11 @@
 # Set this to nil to remove -s
 %define py3_shbang_opts %{nil}
 
-%global doc_version 2.16.15
-
 Name: ansible-core
 Summary: A radically simple IT automation system
 Epoch:   1
-Version: 2.16.16
-Release: 2%{?dist}.1
+Version: 2.16.19
+Release: 2%{?dist}
 Group: Development/Libraries
 # The main license is GPLv3+. Many of the files in lib/ansible/module_utils
 # are BSD licensed. There are various files scattered throughout the codebase
@@ -27,16 +25,13 @@ Group: Development/Libraries
 License: GPL-3.0-or-later AND BSD-2-Clause AND PSF-2.0 AND MIT AND Apache-2.0
 
 Source0: https://files.pythonhosted.org/packages/source/a/ansible-core/ansible_core-%{version}.tar.gz
-Source1: https://github.com/ansible/ansible-documentation/archive/v%{doc_version}/ansible-documentation-%{doc_version}.tar.gz
+Source1: https://github.com/ansible/ansible-documentation/archive/v%{version}/ansible-documentation-%{version}.tar.gz
 Source2: ansible-test-data-files.txt
 
 %if 0%{!?centos:1} && 0%{?rhel}
 Source99: telemetry.py
 Patch99: telemetry.patch
 %endif
-
-# https://github.com/ansible/ansible/commit/8ffdf8a635386ceb83900d16ee1b2b0d50170f01
-Patch100: ansible-core-2.16.16-CVE-2026-11332.patch
 
 Url: https://ansible.com
 BuildArch: noarch
@@ -113,8 +108,6 @@ developed for ansible.
 %{py3_shebang_fix} %{SOURCE99}
 %endif
 
-%patch -P100 -p1
-
 %build
 %{pyproject_wheel}
 
@@ -163,8 +156,8 @@ done
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/
 mkdir -p %{buildroot}%{_sysconfdir}/ansible/roles/
 
-cp ansible-documentation-%{doc_version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
-cp ansible-documentation-%{doc_version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
+cp ansible-documentation-%{version}/examples/hosts %{buildroot}%{_sysconfdir}/ansible/
+cp ansible-documentation-%{version}/examples/ansible.cfg %{buildroot}%{_sysconfdir}/ansible/
 
 %if 0%{!?centos:1} && 0%{?rhel}
 mkdir -p %{buildroot}%{_datadir}/ansible/telemetry
@@ -202,10 +195,14 @@ install -Dpm 0644 licenses/* -t %{buildroot}%{_pkglicensedir}
 %{python3_sitelib}/ansible_test
 
 %changelog
-* Sat Jul 11 2026 RHEL Packaging Agent <redhat-ymir-agent@redhat.com> - 1:2.16.16-2.1
-- Fix CVE-2026-11332 (ansible-galaxy role installs could allow
-  arbitrary git configuration injection via malformed role
-  requirements) (RHEL-194128)
+* Tue Jul 28 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.19-2
+- Update telemetry plugin (RHEL-192943)
+
+* Mon Jun 22 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.19-1
+- ansible-core 2.16.19 release (RHEL-186672)
+
+* Mon Apr 20 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.18-1
+- ansible-core 2.16.18 release (RHEL-169608)
 
 * Tue Feb 10 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.16.16-2
 - Fix selinux AVC denial when telemetry is enabled (RHEL-148292)

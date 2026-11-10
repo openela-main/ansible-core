@@ -32,7 +32,7 @@ import pathlib
 import subprocess
 import sys
 import uuid
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 if __name__ == '__main__':
     # When run as a script via insights-client, these are not needed
@@ -84,6 +84,15 @@ _CORE_SYN_COLLECTIONS = frozenset((
     'ansible.legacy',
 ))
 
+_CORE_FACT_MODULES = frozenset((
+    'setup',
+    'ansible.builtin.setup',
+    'ansible.legacy.setup',
+    'gather_facts',
+    'ansible.builtin.gather_facts',
+    'ansible.legacy.gather_facts',
+))
+
 _ANSIBLE_TELEMETRY_MESSAGE_ID = uuid.UUID('73df9e03d8c6473eb811065c4ebc370a')
 
 
@@ -125,6 +134,7 @@ class CallbackModule(CallbackBase):
             ),
         }
         self._hosts = set()
+        self._os = {}
         self._conn_cache = {}
 
     def _is_insights_client_active(self):
@@ -157,6 +167,25 @@ class CallbackModule(CallbackBase):
         super().set_options(task_keys=task_keys, var_options=var_options, direct=direct)
         self.disabled = self._set_disabled()
 
+    def _track_os(self, host_name, result):
+        if host_name in self._os:
+            return
+
+        try:
+            af = result.get('ansible_facts')
+        except AttributeError:
+            return
+
+        if not af:
+            return
+
+        try:
+            os_name = '%(ansible_distribution)s-%(ansible_distribution_version)s' % af
+        except KeyError:
+            return
+        else:
+            self._os[host_name] = os_name
+
     def _handle_result(self, *args, **kwargs):
         if not args:
             return
@@ -166,15 +195,19 @@ class CallbackModule(CallbackBase):
             return
 
         host = result._host
+        host_name = host.get_name()
         task = result._task
         role = task._role
 
-        self._hosts.add(host.get_name())
+        self._hosts.add(host_name)
 
         action = task.resolved_action
         action_collection = None
         if action and '.' in action:
             action_collection = '.'.join(action.split('.', 2)[:2])
+
+        if action in _CORE_FACT_MODULES:
+            self._track_os(host_name, result._result)
 
         role_collection = None
         role_name = None if not role else role.get_name()
@@ -214,6 +247,7 @@ class CallbackModule(CallbackBase):
         }
         self._telemetry['hosts'] = {
             'count': len(self._hosts),
+            'os': Counter(self._os.values()),
         }
 
         for collection in self._telemetry['collections']:
