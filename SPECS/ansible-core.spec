@@ -29,7 +29,7 @@ Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
 Epoch: 1
 Version: 2.14.18
-Release: 3%{?dist}.1
+Release: 5%{?dist}
 
 Group: Development/Libraries
 License: GPLv3+
@@ -42,8 +42,6 @@ Source3: https://files.pythonhosted.org/packages/source/J/Jinja2/Jinja2-%{jinja2
 Source4: https://files.pythonhosted.org/packages/source/M/MarkupSafe/MarkupSafe-%{markupsafe_version}.tar.gz
 
 Patch0: remove-bundled-deps-from-requirements.patch
-
-# https://github.com/ansible/ansible/commit/edee59aa15abcc74d920bb3e9c3835ab8db05a2f
 Patch1: ansible-core-2.14.18-CVE-2026-11332.patch
 
 %if 0%{!?centos:1} && 0%{?rhel}
@@ -211,9 +209,12 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 
 
 %changelog
-* Sat Jul 11 2026 RHEL Packaging Agent <redhat-ymir-agent@redhat.com> - 1:2.14.18-3.1
+* Tue Aug 18 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.18-5
 - Fix CVE-2026-11332 (prevent arbitrary git configuration via role
-  requirements) (RHEL-194134)
+  requirements) (RHEL-194132)
+
+* Tue Jul 28 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.18-4
+- Update telemetry plugin (RHEL-218836)
 
 * Tue Feb 10 2026 Dimitri Savineau <dsavinea@redhat.com> - 1:2.14.18-3
 - Fix selinux AVC denial when telemetry is enabled (RHEL-148293)
