@@ -209,10 +209,12 @@ class CallbackModule(CallbackBase):
         if action in _CORE_FACT_MODULES:
             self._track_os(host_name, result._result)
 
-        role_collection = None
-        role_name = None if not role else role.get_name()
-        if role and '.' in role_name:
-            role_collection = '.'.join(role_name.split('.', 2)[:2])
+        # getattr guards against _role_collection (a private ansible-core
+        # attr) being removed/renamed in a future core version; `if role`
+        # handles tasks with no role. The getattr can handle both, but the ternary
+        # is used to convey the different intents.
+        role_collection = getattr(role, '_role_collection', None) if role else None
+        role_name = role.get_name() if role else None
 
         connection_collection = None
         connection = _get_connection_fqcn(task, host)
@@ -250,10 +252,14 @@ class CallbackModule(CallbackBase):
             'os': Counter(self._os.values()),
         }
 
-        for collection in self._telemetry['collections']:
+        for collection in list(self._telemetry['collections']):
             if collection in _CORE_SYN_COLLECTIONS:
                 continue
-            cpath = files('ansible_collections.%s' % collection)
+            try:
+                cpath = files('ansible_collections.%s' % collection)
+            except ImportError:
+                self._telemetry['collections'].pop(collection, None)
+                continue
             for candidate in ('METADATA.json', 'galaxy.yml'):
                 mdfile = cpath.joinpath(candidate)
                 if mdfile.exists():

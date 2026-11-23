@@ -38,7 +38,7 @@
 Name: ansible-core
 Summary: SSH-based configuration management, deployment, and task execution system
 Version: 2.16.3
-Release: 4%{?dist}
+Release: 5%{?dist}
 ExcludeArch: i686
 
 Group: Development/Libraries
@@ -230,6 +230,9 @@ strip --strip-unneeded %{vendor_path}/markupsafe/_speedups%{python3_ext_suffix}
 %{python3_sitelib}/ansible_test
 
 %changelog
+* Wed Oct 14 2026 Dimitri Savineau <dsavinea@redhat.com> - 2.16.3-5
+- Fix telemetry callback when collection/role names contain dot (RHEL-283280)
+
 * Wed Sep 09 2026 Dimitri Savineau <dsavinea@redhat.com> - 2.16.3-4
 - Fix CVE-2026-11332 (ansible-galaxy role installs could allow
   arbitrary git configuration injection via malformed role
